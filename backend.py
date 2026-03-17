@@ -15,7 +15,7 @@ def home():
 @app.post("/create_order")
 def create_order():
     order = client.order.create({
-        "amount": 7900,  # ₹79 (in paise)
+        "amount": 100,  # ₹79 (in paise)
         "currency": "INR",
         "payment_capture": 1
     })
