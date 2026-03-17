@@ -98,3 +98,61 @@ if uploaded_file:
 
         except Exception as e:
             st.error(f"Error: {e}")
+st.markdown("### 🔓 Unlock Full Report (₹79)")
+
+if st.button("💳 Pay Now"):
+    response = requests.post(
+        "https://resume-analyzer-qamg.onrender.com/create_order"
+    )
+
+    order = response.json()
+    st.session_state["order_id"] = order["id"]
+
+    st.markdown(f"""
+    <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+    <script>
+    var options = {{
+        "key": "YOUR_KEY_ID",
+        "amount": "{order['amount']}",
+        "currency": "INR",
+        "name": "Resume Analyzer",
+        "description": "Unlock Full Report",
+        "order_id": "{order['id']}",
+        "handler": function (response){{
+            window.location.reload();
+        }}
+    }};
+    var rzp = new Razorpay(options);
+    rzp.open();
+    </script>
+    """, unsafe_allow_html=True)
+
+# 🔐 VERIFY PAYMENT
+st.subheader("🔐 Verify Payment")
+
+payment_id = st.text_input("Payment ID")
+signature = st.text_input("Signature")
+
+if st.button("Verify Payment"):
+    response = requests.post(
+        "https://resume-analyzer-qamg.onrender.com/verify_payment",
+        json={
+            "payment_id": payment_id,
+            "order_id": st.session_state.get("order_id"),
+            "signature": signature
+        }
+    )
+
+    if response.json()["status"] == "success":
+        st.success("Payment Verified ✅")
+
+        # 🔓 UNLOCK DATA
+        st.write(", ".join(missing) if missing else "No major gaps 🎉")
+
+        if missing:
+            st.subheader("📌 Recommended to Learn")
+            for skill in missing:
+                st.write(f"👉 {skill}")
+
+    else:
+        st.error("Payment Failed ❌")
