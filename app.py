@@ -108,7 +108,7 @@ if uploaded_file:
 
             result = response.json()
 
-            if result["status"] == "success":
+            if result.get("status") == "success":
                 st.success("Payment Verified ✅")
 
                 # 🔓 UNLOCK DATA
