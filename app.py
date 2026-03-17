@@ -72,7 +72,7 @@ if uploaded_file:
     if st.button("Verify Payment"):
         try:
             response = requests.post(
-                "http://localhost:8000/verify_payment",
+                "https://resume-analyzer-qamg.onrender.com/verify_payment",
                 json={
                     "payment_id": payment_id,
                     "order_id": order_id,
