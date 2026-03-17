@@ -1,5 +1,7 @@
-streamlit
+fastapi
+uvicorn
+razorpay
 pymupdf
 scikit-learn
-pandas
 spacy
+requests
