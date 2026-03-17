@@ -1,7 +1,21 @@
+
 import streamlit as st
 from parser import extract_text_from_pdf
 from ats import calculate_ats_score
 from skills import extract_skills, skill_gap
+import requests
+
+st.markdown("""
+# 🚀 AI Resume Analyzer
+
+This tool helps students:
+- Check ATS score
+- Identify missing skills
+- Improve placement chances
+
+Built by students for students.
+""")
+
 
 st.set_page_config(page_title="AI Resume Analyzer", layout="centered")
 
@@ -49,20 +63,47 @@ if uploaded_file:
 
     # 🔒 LOCKED SECTION
     st.subheader("❌ Missing Skills")
+# 🔒 LOCKED SECTION
+st.subheader("❌ Missing Skills")
 
-    st.markdown("### 🔓 Unlock Full Report (₹79)")
-    st.markdown("[👉 Pay Here](https://rzp.io/rzp/Ir3XL5cl)")
+st.markdown("### 🔓 Unlock Full Report (₹79)")
 
-    st.warning("⚡ 90% resumes get rejected due to missing skills")
-    st.info("After payment, click below")
+# Payment link (user pays here)
+st.markdown("[👉 Pay Here](https://rzp.io/rzp/Ir3XL5cl)")
 
-    if st.button("I have paid"):
-        st.success("Access granted ✅")
+st.warning("⚡ 90% resumes get rejected due to missing skills")
 
-        # 👇 NOW SHOW DATA
-        st.write(", ".join(missing) if missing else "No major gaps 🎉")
+# 👇 NEW VERIFICATION SYSTEM
+st.subheader("🔐 Verify Payment")
 
-        if missing:
-            st.subheader("📌 Recommended to Learn")
-            for skill in missing:
-                st.write(f"👉 {skill}")
+payment_id = st.text_input("Enter Payment ID")
+order_id = st.text_input("Enter Order ID")
+signature = st.text_input("Enter Signature")
+
+if st.button("Verify Payment"):
+    try:
+        response = requests.post(
+            "http://127.0.0.1:8000/verify_payment",
+            json={
+                "payment_id": payment_id,
+                "order_id": order_id,
+                "signature": signature
+            }
+        )
+
+        if response.json()["status"] == "success":
+            st.success("Payment Verified ✅")
+
+            # 👇 SHOW DATA AFTER VERIFICATION
+            st.write(", ".join(missing) if missing else "No major gaps 🎉")
+
+            if missing:
+                st.subheader("📌 Recommended to Learn")
+                for skill in missing:
+                    st.write(f"👉 {skill}")
+
+        else:
+            st.error("Payment Failed ❌")
+
+    except:
+        st.error("Backend not running ❌")
