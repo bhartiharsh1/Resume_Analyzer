@@ -54,25 +54,33 @@ if uploaded_file:
 
     st.divider()
 
-    # 🔒 LOCKED SECTION
-    st.subheader("❌ Missing Skills")
+ st.subheader("❌ Missing Skills")
 
-    st.markdown("### 🔓 Unlock Full Report (₹1)")
-    st.warning("⚡ 90% resumes get rejected due to missing skills")
+st.markdown("### 🔓 Unlock Full Report (₹1)")
+st.warning("⚡ 90% resumes get rejected due to missing skills")
 
-    # 💳 PAYMENT LINK (WORKING)
-    st.markdown("[💳 Pay Now](https://rzp.io/rzp/Ir3XL5cl)")
+# 💳 PAYMENT LINK
+st.markdown("[💳 Pay Now](https://rzp.io/rzp/Ir3XL5cl)")
 
-    st.info("After payment, come back and click below 👇")
+st.info("After payment, enter your UTR (Transaction ID) below 👇")
 
-    # 🔓 SIMPLE UNLOCK BUTTON
-    if st.button("✅ I have paid"):
-        st.success("Access granted ✅")
+utr = st.text_input("Enter UTR / Transaction ID")
 
-        # SHOW DATA
+if st.button("Verify Payment"):
+    response = requests.post(
+        "https://resume-analyzer-qamg.onrender.com/verify_utr",
+        json={"utr": utr}
+    )
+
+    if response.json().get("status") == "success":
+        st.success("Payment Verified ✅")
+
         st.write(", ".join(missing) if missing else "No major gaps 🎉")
 
         if missing:
             st.subheader("📌 Recommended to Learn")
             for skill in missing:
                 st.write(f"👉 {skill}")
+
+    else:
+        st.error("Payment not found ❌")
