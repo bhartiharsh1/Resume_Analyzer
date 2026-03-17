@@ -5,7 +5,7 @@ import os
 
 app = FastAPI()
 
-client = razorpay.Client(auth=("YOUR_KEY_ID", "YOUR_SECRET"))
+client = razorpay.Client(auth=("rzp_test_SSRER7EFytYsML", "LaeSPK56HLqC3IIoXLE8aLp5"))
 
 @app.get("/")
 def home():
