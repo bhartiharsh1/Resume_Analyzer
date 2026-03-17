@@ -19,7 +19,6 @@ job_desc = {
     "Data Analyst": "python sql excel power bi statistics data analysis",
     "Data Scientist": "python machine learning statistics deep learning"
 }
-
 if uploaded_file:
     with st.spinner("Analyzing your resume..."):
         text = extract_text_from_pdf(uploaded_file)
@@ -46,11 +45,24 @@ if uploaded_file:
     st.subheader("✅ Your Skills")
     st.write(", ".join(user_skills) if user_skills else "No skills detected")
 
-    st.subheader("❌ Missing Skills")
-    st.write(", ".join(missing) if missing else "No major gaps 🎉")
+    st.divider()
 
-    # Recommendations
-    if missing:
-        st.subheader("📌 Recommended to Learn")
-        for skill in missing:
-            st.write(f"👉 {skill}")
+    # 🔒 LOCKED SECTION
+    st.subheader("❌ Missing Skills")
+
+    st.markdown("### 🔓 Unlock Full Report (₹79)")
+    st.markdown("[👉 Pay Here](https://rzp.io/rzp/Ir3XL5cl)")
+
+    st.warning("⚡ 90% resumes get rejected due to missing skills")
+    st.info("After payment, click below")
+
+    if st.button("I have paid"):
+        st.success("Access granted ✅")
+
+        # 👇 NOW SHOW DATA
+        st.write(", ".join(missing) if missing else "No major gaps 🎉")
+
+        if missing:
+            st.subheader("📌 Recommended to Learn")
+            for skill in missing:
+                st.write(f"👉 {skill}")
