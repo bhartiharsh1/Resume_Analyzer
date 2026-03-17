@@ -112,7 +112,7 @@ if st.button("💳 Pay Now"):
     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
     <script>
     var options = {{
-        "key": "YOUR_KEY_ID",
+        "key": "rzp_test_SSRER7EFytYsML",
         "amount": "{order['amount']}",
         "currency": "INR",
         "name": "Resume Analyzer",
