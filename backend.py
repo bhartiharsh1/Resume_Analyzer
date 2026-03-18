@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-from pydantic import BaseModel
 import razorpay
 
 app = FastAPI()
@@ -11,36 +10,23 @@ def home():
     return {"message": "Backend running 🚀"}
 
 
-# 👉 CREATE ORDER
-@app.post("/create_order")
-def create_order():
-    order = client.order.create({
-        "amount": 100,  # ₹1 (in paise)
-        "currency": "INR",
-        "payment_capture": 1
-    })
-    return order
-
-
-# 👉 ADD THIS (VERY IMPORTANT 🔥)
-class Payment(BaseModel):
-    payment_id: str
-    order_id: str
-    signature: str
-
-
+# 🔐 VERIFY PAYMENT (FOR PAYMENT LINK)
 @app.post("/verify_payment")
-def verify_payment(data: Payment):
+def verify_payment(data: dict):
+    payment_id = data.get("payment_id")
+
+    if not payment_id:
+        return {"status": "failed", "error": "No payment_id provided"}
+
     try:
-        client.utility.verify_payment_signature({
-            'razorpay_order_id': data.order_id,
-            'razorpay_payment_id': data.payment_id,
-            'razorpay_signature': data.signature
-        })
-        return {"status": "success"}
+        # 🔥 Fetch payment from Razorpay
+        payment = client.payment.fetch(payment_id)
+
+        # Check if payment is successful
+        if payment["status"] == "captured":
+            return {"status": "success"}
+        else:
+            return {"status": "failed", "error": "Payment not completed"}
 
     except Exception as e:
-        return {
-            "status": "failed",
-            "error": str(e)
-        }
+        return {"status": "failed", "error": str(e)}
