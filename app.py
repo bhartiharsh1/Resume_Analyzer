@@ -55,10 +55,8 @@ if uploaded_file:
 
     st.divider()
 
-    # 🔒 LOCKED SECTION
-    st.subheader("❌ Missing Skills")
 
-  # 👤 USER EMAIL (IMPORTANT)
+
 # 👤 USER EMAIL (IMPORTANT)
 email = st.text_input("Enter your email (required for payment)")
 
