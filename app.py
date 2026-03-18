@@ -58,7 +58,7 @@ if uploaded_file:
     # 🔒 LOCKED SECTION
     st.subheader("❌ Missing Skills")
 
-    st.markdown("### 🔓 Unlock Full Report (₹79)")
+    st.markdown("### 🔓 Unlock Full Report (₹1)")
     st.warning("⚡ 90% resumes get rejected due to missing skills")
 
     # ✅ PAYMENT LINK (REPLACED BUTTON)
