@@ -2,7 +2,6 @@ import streamlit as st
 from parser import extract_text_from_pdf
 from ats import calculate_ats_score
 from skills import extract_skills, skill_gap
-import requests
 
 st.set_page_config(page_title="AI Resume Analyzer", layout="centered")
 
@@ -58,69 +57,22 @@ if uploaded_file:
     # 🔒 LOCKED SECTION
     st.subheader("❌ Missing Skills")
 
-    st.markdown("### 🔓 Unlock Full Report (₹79)")
+    st.markdown("### 🔓 Unlock Full Report (₹1)")
     st.warning("⚡ 90% resumes get rejected due to missing skills")
 
-    # 💳 PAY BUTTON
-    if st.button("💳 Pay Now"):
-        response = requests.post(
-            "https://resume-analyzer-qamg.onrender.com/create_order"
-        )
+    # 💳 PAYMENT LINK (WORKING)
+    st.markdown("[💳 Pay Now](https://rzp.io/rzp/Ir3XL5cl)")
 
-        order = response.json()
-        st.session_state["order_id"] = order["id"]
+    st.info("After payment, come back and click below 👇")
 
-        st.markdown(f"""
-        <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-        <script>
-        var options = {{
-            "key": "rzp_test_SSRER7EFytYsML",
-            "amount": "{order['amount']}",
-            "currency": "INR",
-            "name": "Resume Analyzer",
-            "description": "Unlock Full Report",
-            "order_id": "{order['id']}",
-            "handler": function (response){{
-                alert("Payment Successful!");
-            }}
-        }};
-        var rzp = new Razorpay(options);
-        rzp.open();
-        </script>
-        """, unsafe_allow_html=True)
+    # 🔓 SIMPLE UNLOCK BUTTON
+    if st.button("✅ I have paid"):
+        st.success("Access granted ✅")
 
-    # 🔐 VERIFY PAYMENT
-    st.subheader("🔐 Verify Payment")
+        # SHOW DATA
+        st.write(", ".join(missing) if missing else "No major gaps 🎉")
 
-    payment_id = st.text_input("Enter Payment ID")
-    signature = st.text_input("Enter Signature")
-
-    if st.button("Verify Payment"):
-        try:
-            response = requests.post(
-                "https://resume-analyzer-qamg.onrender.com/verify_payment",
-                json={
-                    "payment_id": payment_id,
-                    "order_id": st.session_state.get("order_id"),
-                    "signature": signature
-                }
-            )
-
-            result = response.json()
-
-            if result["status"] == "success":
-                st.success("Payment Verified ✅")
-
-                # 🔓 UNLOCK DATA
-                st.write(", ".join(missing) if missing else "No major gaps 🎉")
-
-                if missing:
-                    st.subheader("📌 Recommended to Learn")
-                    for skill in missing:
-                        st.write(f"👉 {skill}")
-
-            else:
-                st.error("Payment Failed ❌")
-
-        except Exception as e:
-            st.error(f"Error: {e}")
+        if missing:
+            st.subheader("📌 Recommended to Learn")
+            for skill in missing:
+                st.write(f"👉 {skill}")
