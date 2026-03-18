@@ -61,8 +61,6 @@ if uploaded_file:
   # 👤 USER EMAIL (IMPORTANT)
 email = st.text_input("Enter your email (required for payment)")
 
-# 🔒 LOCKED SECTION
-st.subheader("❌ Missing Skills")
 
 st.markdown("### 🔓 Unlock Full Report (₹1)")
 st.warning("⚡ 90% resumes get rejected due to missing skills")
