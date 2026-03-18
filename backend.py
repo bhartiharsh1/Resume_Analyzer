@@ -1,32 +1,78 @@
 from fastapi import FastAPI
+from pydantic import BaseModel
 import razorpay
+import sqlite3
 
 app = FastAPI()
 
+# 🔐 Razorpay client
 client = razorpay.Client(auth=("rzp_test_SSRER7EFytYsML", "LaeSPK56HLqC3IIoXLE8aLp5"))
+
+# 🗄️ DATABASE
+conn = sqlite3.connect("payments.db", check_same_thread=False)
+cursor = conn.cursor()
+
+cursor.execute("""
+CREATE TABLE IF NOT EXISTS users (
+    email TEXT PRIMARY KEY,
+    payment_status TEXT,
+    payment_id TEXT
+)
+""")
+conn.commit()
+
 
 @app.get("/")
 def home():
     return {"message": "Backend running 🚀"}
 
 
-# 🔐 VERIFY PAYMENT (FOR PAYMENT LINK)
-@app.post("/verify_payment")
-def verify_payment(data: dict):
-    payment_id = data.get("payment_id")
+# 👉 CREATE ORDER
+@app.post("/create_order")
+def create_order():
+    order = client.order.create({
+        "amount": 100,  # ₹1
+        "currency": "INR",
+        "payment_capture": 1
+    })
+    return order
 
-    if not payment_id:
-        return {"status": "failed", "error": "No payment_id provided"}
 
+# 👉 SAVE PAYMENT (AUTO VERIFY)
+class PaymentData(BaseModel):
+    email: str
+    payment_id: str
+
+
+@app.post("/save_payment")
+def save_payment(data: PaymentData):
     try:
-        # 🔥 Fetch payment from Razorpay
-        payment = client.payment.fetch(payment_id)
+        payment = client.payment.fetch(data.payment_id)
 
-        # Check if payment is successful
         if payment["status"] == "captured":
+
+            cursor.execute("""
+            INSERT OR REPLACE INTO users (email, payment_status, payment_id)
+            VALUES (?, ?, ?)
+            """, (data.email, "paid", data.payment_id))
+
+            conn.commit()
+
             return {"status": "success"}
-        else:
-            return {"status": "failed", "error": "Payment not completed"}
+
+        return {"status": "failed"}
 
     except Exception as e:
         return {"status": "failed", "error": str(e)}
+
+
+# 👉 CHECK PAYMENT STATUS
+@app.get("/check_payment")
+def check_payment(email: str):
+    cursor.execute("SELECT payment_status FROM users WHERE email=?", (email,))
+    result = cursor.fetchone()
+
+    if result and result[0] == "paid":
+        return {"status": "paid"}
+
+    return {"status": "not_paid"}
