@@ -6,8 +6,8 @@ from ats import calculate_ats_score
 from skills import extract_skills, skill_gap
 
 # ─── CONFIG ───────────────────────────────────────────────
-BACKEND_URL    = "http://localhost:8000"   # change to your deployed backend URL
-RZP_KEY_ID     = "rzp_test_SSRER7EFytYsML"  # must match backend
+BACKEND_URL = "http://localhost:8000"    # change when deployed
+RZP_KEY_ID  = "rzp_test_SSRER7EFytYsML" # must match backend
 
 st.set_page_config(page_title="AI Resume Analyzer", layout="centered")
 
@@ -24,45 +24,61 @@ uploaded_file = st.file_uploader("📄 Upload Resume (PDF)", type="pdf")
 
 job_role = st.selectbox("🎯 Select Job Role", ["Data Analyst", "Data Scientist"])
 job_desc = {
-    "Data Analyst":  "python sql excel power bi statistics data analysis",
+    "Data Analyst":   "python sql excel power bi statistics data analysis",
     "Data Scientist": "python machine learning statistics deep learning"
 }
 
-# ─── EMAIL (needed to track payment per user) ─────────────
-email = st.text_input("📧 Enter your email to unlock report", placeholder="you@example.com")
+# ─── PHONE INPUT ──────────────────────────────────────────
+phone = st.text_input(
+    "📱 Enter your 10-digit mobile number",
+    placeholder="9876543210",
+    max_chars=10
+)
 
-# ─── HANDLE PAYMENT CALLBACK (query params set by Razorpay JS) ────────────
+phone_valid = phone.isdigit() and len(phone) == 10
+
+if phone and not phone_valid:
+    st.error("⚠️ Please enter a valid 10-digit mobile number")
+
+# ─── HANDLE PAYMENT CALLBACK (Razorpay redirects here with query params) ──
 params = st.query_params
 
 if (
     "payment_id" in params
-    and "email" in params
+    and "phone" in params
     and not st.session_state.get("payment_verified")
 ):
-    with st.spinner("🔒 Verifying your payment..."):
+    cb_phone = params["phone"]
+    cb_pid   = params["payment_id"]
+
+    with st.spinner("🔒 Verifying your payment with Razorpay..."):
         try:
             resp = requests.post(f"{BACKEND_URL}/save_payment", json={
-                "email":      params["email"],
-                "payment_id": params["payment_id"]
+                "phone":      cb_phone,
+                "payment_id": cb_pid
             })
-            if resp.json().get("status") == "success":
+            result = resp.json()
+
+            if result.get("status") == "success":
                 st.session_state["payment_verified"] = True
-                st.session_state["verified_email"]   = params["email"]
-                # Clean URL
+                st.session_state["verified_phone"]   = cb_phone
                 st.query_params.clear()
                 st.rerun()
             else:
-                st.error("❌ Payment could not be verified. Contact support.")
-        except Exception as e:
-            st.error(f"Verification error: {e}")
+                reason = result.get("reason") or result.get("error", "Unknown error")
+                st.error(f"❌ Payment verification failed: {reason}")
+                st.query_params.clear()
 
-# ─── MAIN ANALYSIS BLOCK ──────────────────────────────────
+        except Exception as e:
+            st.error(f"Backend error during verification: {e}")
+
+# ─── MAIN ANALYSIS ────────────────────────────────────────
 if uploaded_file:
     with st.spinner("Analyzing your resume..."):
-        text       = extract_text_from_pdf(uploaded_file)
-        score      = calculate_ats_score(text, job_desc[job_role])
+        text        = extract_text_from_pdf(uploaded_file)
+        score       = calculate_ats_score(text, job_desc[job_role])
         user_skills = extract_skills(text)
-        missing    = skill_gap(user_skills, job_role)
+        missing     = skill_gap(user_skills, job_role)
 
     st.divider()
 
@@ -77,7 +93,7 @@ if uploaded_file:
 
     st.divider()
 
-    # Detected Skills
+    # Detected Skills (FREE)
     st.subheader("✅ Your Skills")
     st.write(", ".join(user_skills) if user_skills else "No skills detected")
 
@@ -86,20 +102,23 @@ if uploaded_file:
     # ─── LOCKED SECTION ───────────────────────────────────
     st.subheader("❌ Missing Skills")
 
-    # ── Determine if this user has already paid ──
+    # Check if already paid (session cache first, then DB)
     already_paid = st.session_state.get("payment_verified", False)
 
-    if not already_paid and email:
+    if not already_paid and phone_valid:
         try:
-            chk = requests.get(f"{BACKEND_URL}/check_payment", params={"email": email})
+            chk = requests.get(
+                f"{BACKEND_URL}/check_payment",
+                params={"phone": phone}
+            )
             if chk.json().get("status") == "paid":
                 already_paid = True
                 st.session_state["payment_verified"] = True
-                st.session_state["verified_email"]   = email
+                st.session_state["verified_phone"]   = phone
         except Exception:
             pass  # backend unreachable — stay locked
 
-    # ── SHOW UNLOCKED CONTENT ──
+    # ── UNLOCKED ──────────────────────────────────────────
     if already_paid:
         st.success("✅ Payment verified — full report unlocked!")
         st.write(", ".join(missing) if missing else "No major gaps 🎉")
@@ -108,42 +127,48 @@ if uploaded_file:
             for skill in missing:
                 st.write(f"👉 {skill}")
 
-    # ── SHOW PAYMENT GATE ──
+    # ── PAYMENT GATE ──────────────────────────────────────
     else:
         st.markdown("### 🔓 Unlock Full Report — ₹1 only")
         st.warning("⚡ 90% resumes get rejected due to missing skills")
 
-        if not email:
-            st.info("👆 Enter your email above to proceed with payment")
+        if not phone_valid:
+            st.info("👆 Enter your valid 10-digit mobile number above to pay")
         else:
-            # Create a fresh Razorpay order from backend
+            # Create order from backend
             try:
                 order_resp = requests.post(f"{BACKEND_URL}/create_order")
                 order      = order_resp.json()
                 order_id   = order.get("id")
 
                 if not order_id:
-                    st.error("Could not create payment order. Try again.")
+                    st.error("❌ Could not create payment order. Is the backend running?")
                 else:
-                    # Inline Razorpay checkout — on success, redirects back
-                    # with ?payment_id=...&email=... so Streamlit can verify
+                    # Razorpay inline checkout
+                    # On success → redirects to this page with ?payment_id=...&phone=...
                     checkout_html = f"""
                     <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-                    <button
-                        id="pay-btn"
-                        style="
-                            background: #6c63ff;
-                            color: white;
-                            padding: 12px 28px;
-                            border: none;
-                            border-radius: 8px;
-                            font-size: 16px;
-                            cursor: pointer;
-                            font-family: sans-serif;
-                        "
-                    >
+
+                    <button id="pay-btn" style="
+                        background: #6c63ff;
+                        color: white;
+                        padding: 14px 32px;
+                        border: none;
+                        border-radius: 8px;
+                        font-size: 17px;
+                        font-family: sans-serif;
+                        cursor: pointer;
+                        box-shadow: 0 4px 14px rgba(108,99,255,0.4);
+                    ">
                         💳 Pay ₹1 &amp; Unlock Report
                     </button>
+
+                    <p id="status-msg" style="
+                        font-family: sans-serif;
+                        font-size: 13px;
+                        color: #888;
+                        margin-top: 10px;
+                    "></p>
 
                     <script>
                     document.getElementById('pay-btn').onclick = function() {{
@@ -154,13 +179,23 @@ if uploaded_file:
                             order_id:    '{order_id}',
                             name:        'AI Resume Analyzer',
                             description: 'Unlock Missing Skills Report',
-                            prefill:     {{ email: '{email}' }},
-                            theme:       {{ color: '#6c63ff' }},
+                            prefill: {{
+                                contact: '91{phone}'
+                            }},
+                            theme: {{ color: '#6c63ff' }},
+                            modal: {{
+                                ondismiss: function() {{
+                                    document.getElementById('status-msg').innerText =
+                                        'Payment cancelled. Click above to try again.';
+                                }}
+                            }},
                             handler: function(response) {{
-                                // Redirect back to this page with payment details in URL
+                                document.getElementById('status-msg').innerText =
+                                    '✅ Payment done! Verifying...';
+                                // Redirect back with payment_id + phone in URL
                                 var base = window.top.location.href.split('?')[0];
                                 var qs   = '?payment_id=' + response.razorpay_payment_id
-                                         + '&email={email}';
+                                         + '&phone={phone}';
                                 window.top.location.href = base + qs;
                             }}
                         }};
@@ -169,8 +204,13 @@ if uploaded_file:
                     }};
                     </script>
                     """
-                    components.html(checkout_html, height=80)
+                    components.html(checkout_html, height=120)
 
+            except requests.exceptions.ConnectionError:
+                st.error("❌ Cannot reach backend. Make sure FastAPI is running on port 8000.")
             except Exception as e:
-                st.error(f"Backend connection error: {e}")
-                st.markdown("[💳 Pay directly via link](https://rzp.io/rzp/Ir3XL5cl)")
+                st.error(f"Unexpected error: {e}")
+
+else:
+    if not uploaded_file:
+        st.info("👆 Upload your resume PDF to get started")
