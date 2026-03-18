@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 from parser import extract_text_from_pdf
 from ats import calculate_ats_score
 from skills import extract_skills, skill_gap
@@ -30,8 +29,6 @@ job_desc = {
 # Initialize session state
 if "missing" not in st.session_state:
     st.session_state.missing = []
-if "payment_done" not in st.session_state:
-    st.session_state.payment_done = False
 
 # 🔥 MAIN BLOCK
 if uploaded_file:
@@ -70,7 +67,7 @@ st.markdown("### 🔓 Unlock Full Report (₹1)")
 st.warning("⚡ 90% resumes get rejected due to missing skills")
 
 
-# ✅ CHECK PAYMENT STATUS — with timeout + proper error messages
+# ✅ CHECK PAYMENT STATUS
 def check_payment(email):
     try:
         res = requests.get(
@@ -90,11 +87,11 @@ def check_payment(email):
         return {"status": "error"}
 
 
-# ✅ CREATE ORDER — with timeout + proper error messages
-def create_order():
+# ✅ GET PAYMENT LINK from backend
+def get_payment_link(email):
     try:
-        res = requests.post(
-            f"{BACKEND_URL}/create_order",
+        res = requests.get(
+            f"{BACKEND_URL}/create_payment_link?email={email}",
             timeout=15
         )
         res.raise_for_status()
@@ -102,7 +99,7 @@ def create_order():
         if "error" in data:
             st.error(f"❌ Razorpay error: {data['error']}")
             return None
-        return data
+        return data.get("payment_url")
     except requests.exceptions.Timeout:
         st.warning("⏳ Backend is waking up, please wait 30 seconds and try again.")
         return None
@@ -110,14 +107,15 @@ def create_order():
         st.error("❌ Cannot connect to backend. Check if Render service is running.")
         return None
     except Exception as e:
-        st.error(f"❌ Unexpected error: {e}")
+        st.error(f"❌ Error: {e}")
         return None
 
 
 if email:
     status = check_payment(email)
 
-    if status.get("status") == "paid" or st.session_state.payment_done:
+    if status.get("status") == "paid":
+        # ✅ UNLOCKED — show missing skills
         st.success("🔓 Already Unlocked ✅")
         missing = st.session_state.missing
         st.write(", ".join(missing) if missing else "No major gaps 🎉")
@@ -126,65 +124,34 @@ if email:
             for skill in missing:
                 st.write(f"👉 {skill}")
 
-    else:
-        if st.button("💳 Pay Now"):
-            with st.spinner("Connecting to payment gateway..."):
-                order = create_order()
+    elif status.get("status") == "not_paid":
+        if st.button("💳 Pay Now - ₹1"):
+            with st.spinner("Generating payment link..."):
+                payment_url = get_payment_link(email)
 
-            if order and "id" in order:
-                # ✅ components.html() runs JS — st.markdown() does NOT
-                razorpay_html = f"""
-                <html>
-                <body>
-                <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-                <script>
-                    var options = {{
-                        "key": "rzp_test_SSRER7EFytYsML",
-                        "amount": "{order['amount']}",
-                        "currency": "INR",
-                        "name": "Resume Analyzer",
-                        "description": "Unlock Full Report",
-                        "order_id": "{order['id']}",
-                        "prefill": {{
-                            "email": "{email}"
-                        }},
-                        "handler": function (response) {{
-                            fetch("{BACKEND_URL}/save_payment", {{
-                                method: "POST",
-                                headers: {{
-                                    "Content-Type": "application/json"
-                                }},
-                                body: JSON.stringify({{
-                                    email: "{email}",
-                                    payment_id: response.razorpay_payment_id
-                                }})
-                            }})
-                            .then(res => res.json())
-                            .then(data => {{
-                                if (data.status === "success") {{
-                                    alert("✅ Payment Successful! Refreshing...");
-                                    window.parent.location.reload();
-                                }} else {{
-                                    alert("❌ Payment verification failed. Contact support.");
-                                }}
-                            }})
-                            .catch(err => {{
-                                alert("❌ Error saving payment: " + err);
-                            }});
-                        }},
-                        "modal": {{
-                            "ondismiss": function() {{
-                                alert("⚠️ Payment cancelled.");
-                            }}
-                        }}
-                    }};
-                    var rzp = new Razorpay(options);
-                    rzp.open();
-                </script>
-                </body>
-                </html>
-                """
-                components.html(razorpay_html, height=1)
+            if payment_url:
+                # ✅ Show a clickable link — works 100% in Streamlit, no popup needed
+                st.success("✅ Payment link generated! Click below to pay:")
+                st.markdown(
+                    f"""
+                    <a href="{payment_url}" target="_blank"
+                    style="
+                        display: inline-block;
+                        background-color: #528FF0;
+                        color: white;
+                        padding: 12px 28px;
+                        border-radius: 8px;
+                        font-size: 18px;
+                        font-weight: bold;
+                        text-decoration: none;
+                        margin-top: 10px;
+                    ">
+                    💳 Click Here to Pay ₹1
+                    </a>
+                    """,
+                    unsafe_allow_html=True
+                )
+                st.info("ℹ️ After payment, come back here and refresh the page to unlock your report.")
 
 else:
     st.warning("⚠️ Enter email to continue")
