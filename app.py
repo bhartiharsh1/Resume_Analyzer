@@ -88,7 +88,7 @@ if email:
 
     else:
         # 💳 PAY BUTTON (AUTO SYSTEM)
-        if st.button("💳 Pay Now"):
+        st.markdown("[💳 Pay Now](https://rzp.io/rzp/tkayrowL)")
 
             order = requests.post(
                 "https://resume-analyzer-qamg.onrender.com/create_order"
