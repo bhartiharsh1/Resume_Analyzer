@@ -15,6 +15,8 @@ This tool helps students:
 - Improve placement chances
 """)
 
+BACKEND_URL = "https://resume-analyzer-qamg.onrender.com"
+
 # Upload
 uploaded_file = st.file_uploader("📄 Upload Resume (PDF)", type="pdf")
 
@@ -38,7 +40,7 @@ if uploaded_file:
         score = calculate_ats_score(text, job_desc[job_role])
         user_skills = extract_skills(text)
         missing = skill_gap(user_skills, job_role)
-        st.session_state.missing = missing  # Save to session state
+        st.session_state.missing = missing
 
     st.divider()
 
@@ -68,25 +70,47 @@ st.markdown("### 🔓 Unlock Full Report (₹1)")
 st.warning("⚡ 90% resumes get rejected due to missing skills")
 
 
-# 👉 CHECK PAYMENT STATUS
+# ✅ CHECK PAYMENT STATUS — with timeout + proper error messages
 def check_payment(email):
     try:
         res = requests.get(
-            f"https://resume-analyzer-qamg.onrender.com/check_payment?email={email}"
+            f"{BACKEND_URL}/check_payment?email={email}",
+            timeout=15
         )
+        res.raise_for_status()
         return res.json()
+    except requests.exceptions.Timeout:
+        st.warning("⏳ Backend is waking up, please wait 30 seconds and try again.")
+        return {"status": "error"}
+    except requests.exceptions.ConnectionError:
+        st.error("❌ Cannot connect to backend. Check if Render service is running.")
+        return {"status": "error"}
     except Exception as e:
-        return {"status": "error", "error": str(e)}
+        st.error(f"❌ Unexpected error: {e}")
+        return {"status": "error"}
 
 
-# 👉 CREATE ORDER
+# ✅ CREATE ORDER — with timeout + proper error messages
 def create_order():
     try:
         res = requests.post(
-            "https://resume-analyzer-qamg.onrender.com/create_order"
+            f"{BACKEND_URL}/create_order",
+            timeout=15
         )
-        return res.json()
+        res.raise_for_status()
+        data = res.json()
+        if "error" in data:
+            st.error(f"❌ Razorpay error: {data['error']}")
+            return None
+        return data
+    except requests.exceptions.Timeout:
+        st.warning("⏳ Backend is waking up, please wait 30 seconds and try again.")
+        return None
+    except requests.exceptions.ConnectionError:
+        st.error("❌ Cannot connect to backend. Check if Render service is running.")
+        return None
     except Exception as e:
+        st.error(f"❌ Unexpected error: {e}")
         return None
 
 
@@ -103,14 +127,12 @@ if email:
                 st.write(f"👉 {skill}")
 
     else:
-        # 💳 PAY BUTTON
         if st.button("💳 Pay Now"):
-            order = create_order()
+            with st.spinner("Connecting to payment gateway..."):
+                order = create_order()
 
-            if not order or "id" not in order:
-                st.error("❌ Failed to create order. Please check if the backend is running.")
-            else:
-                # ✅ FIX: Use components.html() instead of st.markdown() to execute JS
+            if order and "id" in order:
+                # ✅ components.html() runs JS — st.markdown() does NOT
                 razorpay_html = f"""
                 <html>
                 <body>
@@ -127,7 +149,7 @@ if email:
                             "email": "{email}"
                         }},
                         "handler": function (response) {{
-                            fetch("https://resume-analyzer-qamg.onrender.com/save_payment", {{
+                            fetch("{BACKEND_URL}/save_payment", {{
                                 method: "POST",
                                 headers: {{
                                     "Content-Type": "application/json"
@@ -152,7 +174,7 @@ if email:
                         }},
                         "modal": {{
                             "ondismiss": function() {{
-                                alert("Payment cancelled.");
+                                alert("⚠️ Payment cancelled.");
                             }}
                         }}
                     }};
@@ -162,7 +184,6 @@ if email:
                 </body>
                 </html>
                 """
-                # ✅ This actually runs JavaScript unlike st.markdown()
                 components.html(razorpay_html, height=1)
 
 else:
