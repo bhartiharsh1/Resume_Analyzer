@@ -58,46 +58,76 @@ if uploaded_file:
     # 🔒 LOCKED SECTION
     st.subheader("❌ Missing Skills")
 
-    st.markdown("### 🔓 Unlock Full Report (₹1)")
-    st.warning("⚡ 90% resumes get rejected due to missing skills")
+  # 👤 USER EMAIL (IMPORTANT)
+email = st.text_input("Enter your email (required for payment)")
 
-    # 💳 PAYMENT LINK
-    st.markdown("[💳 Pay Now](https://rzp.io/rzp/tkayrowL)")
+# 🔒 LOCKED SECTION
+st.subheader("❌ Missing Skills")
 
-    st.info("After payment, copy your Payment ID and paste below 👇")
+st.markdown("### 🔓 Unlock Full Report (₹1)")
+st.warning("⚡ 90% resumes get rejected due to missing skills")
 
-    # 🔐 VERIFY PAYMENT (ONLY PAYMENT ID)
-    st.subheader("🔐 Verify Payment")
+# 👉 CHECK PAYMENT STATUS
+def check_payment(email):
+    res = requests.get(
+        f"https://resume-analyzer-qamg.onrender.com/check_payment?email={email}"
+    )
+    return res.json()
 
-    payment_id = st.text_input("Enter Payment ID (e.g. pay_xxxxxx)")
 
-    if st.button("Verify Payment"):
-        if not payment_id:
-            st.error("Please enter Payment ID")
-        else:
-            try:
-                response = requests.post(
-                    "https://resume-analyzer-qamg.onrender.com/verify_payment",
-                    json={
-                        "payment_id": payment_id
-                    }
-                )
+if email:
+    status = check_payment(email)
 
-                result = response.json()
+    if status["status"] == "paid":
+        st.success("🔓 Already Unlocked ✅")
 
-                if result.get("status") == "success":
-                    st.success("Payment Verified ✅")
+        st.write(", ".join(missing) if missing else "No major gaps 🎉")
 
-                    # 🔓 UNLOCK DATA
-                    st.write(", ".join(missing) if missing else "No major gaps 🎉")
+        if missing:
+            st.subheader("📌 Recommended to Learn")
+            for skill in missing:
+                st.write(f"👉 {skill}")
 
-                    if missing:
-                        st.subheader("📌 Recommended to Learn")
-                        for skill in missing:
-                            st.write(f"👉 {skill}")
+    else:
+        # 💳 PAY BUTTON (AUTO SYSTEM)
+        if st.button("💳 Pay Now"):
 
-                else:
-                    st.error("Payment Not Found ❌")
+            order = requests.post(
+                "https://resume-analyzer-qamg.onrender.com/create_order"
+            ).json()
 
-            except Exception as e:
-                st.error(f"Error: {e}")
+            st.markdown(f"""
+            <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+            <script>
+            var options = {{
+                "key": "rzp_test_SSRER7EFytYsML",
+                "amount": "{order['amount']}",
+                "currency": "INR",
+                "name": "Resume Analyzer",
+                "description": "Unlock Full Report",
+                "order_id": "{order['id']}",
+                "handler": function (response){{
+                    fetch("https://resume-analyzer-qamg.onrender.com/save_payment", {{
+                        method: "POST",
+                        headers: {{
+                            "Content-Type": "application/json"
+                        }},
+                        body: JSON.stringify({{
+                            email: "{email}",
+                            payment_id: response.razorpay_payment_id
+                        }})
+                    }})
+                    .then(res => res.json())
+                    .then(data => {{
+                        alert("Payment Successful ✅");
+                        window.location.reload();
+                    }});
+                }}
+            }};
+            var rzp = new Razorpay(options);
+            rzp.open();
+            </script>
+            """, unsafe_allow_html=True)
+
+else:
+    st.warning("⚠️ Enter email to continue")
