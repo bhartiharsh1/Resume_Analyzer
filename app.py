@@ -59,8 +59,11 @@ if uploaded_file:
     st.subheader("❌ Missing Skills")
 
   # 👤 USER EMAIL (IMPORTANT)
+# 👤 USER EMAIL (IMPORTANT)
 email = st.text_input("Enter your email (required for payment)")
 
+# 🔒 LOCKED SECTION
+st.subheader("❌ Missing Skills")
 
 st.markdown("### 🔓 Unlock Full Report (₹1)")
 st.warning("⚡ 90% resumes get rejected due to missing skills")
@@ -88,7 +91,7 @@ if email:
 
     else:
         # 💳 PAY BUTTON (AUTO SYSTEM)
-        st.markdown("[💳 Pay Now](https://rzp.io/rzp/tkayrowL)")
+        if st.button("💳 Pay Now"):
 
             order = requests.post(
                 "https://resume-analyzer-qamg.onrender.com/create_order"
