@@ -1,4 +1,3 @@
-
 import streamlit as st
 from parser import extract_text_from_pdf
 from ats import calculate_ats_score
@@ -59,7 +58,7 @@ if uploaded_file:
     # 🔒 LOCKED SECTION
     st.subheader("❌ Missing Skills")
 
-    st.markdown("### 🔓 Unlock Full Report (₹1)")
+    st.markdown("### 🔓 Unlock Full Report (₹79)")
     st.warning("⚡ 90% resumes get rejected due to missing skills")
 
     # 💳 PAY BUTTON
@@ -109,7 +108,7 @@ if uploaded_file:
 
             result = response.json()
 
-            if result.get("status") == "success":
+            if result["status"] == "success":
                 st.success("Payment Verified ✅")
 
                 # 🔓 UNLOCK DATA
