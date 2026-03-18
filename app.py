@@ -62,7 +62,7 @@ if uploaded_file:
     st.warning("⚡ 90% resumes get rejected due to missing skills")
 
     # ✅ PAYMENT LINK (REPLACED BUTTON)
-    st.markdown("[💳 Pay Now](https://rzp.io/rzp/Ir3XL5cl)")
+    st.markdown("[💳 Pay Now](https://rzp.io/rzp/tkayrowL)")
 
     st.info("After payment, enter your details below 👇")
 
