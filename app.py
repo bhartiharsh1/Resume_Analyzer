@@ -1,46 +1,103 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-import razorpay
+import streamlit as st
+from parser import extract_text_from_pdf
+from ats import calculate_ats_score
+from skills import extract_skills, skill_gap
+import requests
 
-app = FastAPI()
+st.set_page_config(page_title="AI Resume Analyzer", layout="centered")
 
-client = razorpay.Client(auth=("rzp_test_SSRER7EFytYsML", "LaeSPK56HLqC3IIoXLE8aLp5"))
+st.markdown("""
+# 🚀 AI Resume Analyzer
 
-@app.get("/")
-def home():
-    return {"message": "Backend running 🚀"}
+This tool helps students:
+- Check ATS score
+- Identify missing skills
+- Improve placement chances
+""")
 
+# Upload
+uploaded_file = st.file_uploader("📄 Upload Resume (PDF)", type="pdf")
 
-# 👉 CREATE ORDER
-@app.post("/create_order")
-def create_order():
-    order = client.order.create({
-        "amount": 100,  # ₹1 (in paise)
-        "currency": "INR",
-        "payment_capture": 1
-    })
-    return order
+# Role selection
+job_role = st.selectbox("🎯 Select Job Role", ["Data Analyst", "Data Scientist"])
 
+job_desc = {
+    "Data Analyst": "python sql excel power bi statistics data analysis",
+    "Data Scientist": "python machine learning statistics deep learning"
+}
 
-# 👉 ADD THIS (VERY IMPORTANT 🔥)
-class Payment(BaseModel):
-    payment_id: str
-    order_id: str
-    signature: str
+# 🔥 MAIN BLOCK
+if uploaded_file:
 
+    with st.spinner("Analyzing your resume..."):
+        text = extract_text_from_pdf(uploaded_file)
+        score = calculate_ats_score(text, job_desc[job_role])
+        user_skills = extract_skills(text)
+        missing = skill_gap(user_skills, job_role)
 
-@app.post("/verify_payment")
-def verify_payment(data: Payment):
-    try:
-        client.utility.verify_payment_signature({
-            'razorpay_order_id': data.order_id,
-            'razorpay_payment_id': data.payment_id,
-            'razorpay_signature': data.signature
-        })
-        return {"status": "success"}
+    st.divider()
 
-    except Exception as e:
-        return {
-            "status": "failed",
-            "error": str(e)
-        }
+    # ATS Score
+    st.subheader(f"📊 ATS Score: {score}%")
+
+    if score < 50:
+        st.error("❌ Low chances — improve your resume")
+    elif score < 75:
+        st.warning("⚠️ Moderate chances")
+    else:
+        st.success("✅ High chances — strong profile!")
+
+    st.divider()
+
+    # Skills
+    st.subheader("✅ Your Skills")
+    st.write(", ".join(user_skills) if user_skills else "No skills detected")
+
+    st.divider()
+
+    # 🔒 LOCKED SECTION
+    st.subheader("❌ Missing Skills")
+
+    st.markdown("### 🔓 Unlock Full Report (₹1)")
+    st.warning("⚡ 90% resumes get rejected due to missing skills")
+
+    # 💳 PAYMENT LINK
+    st.markdown("[💳 Pay Now](https://rzp.io/rzp/tkayrowL)")
+
+    st.info("After payment, copy your Payment ID and paste below 👇")
+
+    # 🔐 VERIFY PAYMENT (ONLY PAYMENT ID)
+    st.subheader("🔐 Verify Payment")
+
+    payment_id = st.text_input("Enter Payment ID (e.g. pay_xxxxxx)")
+
+    if st.button("Verify Payment"):
+        if not payment_id:
+            st.error("Please enter Payment ID")
+        else:
+            try:
+                response = requests.post(
+                    "https://resume-analyzer-qamg.onrender.com/verify_payment",
+                    json={
+                        "payment_id": payment_id
+                    }
+                )
+
+                result = response.json()
+
+                if result.get("status") == "success":
+                    st.success("Payment Verified ✅")
+
+                    # 🔓 UNLOCK DATA
+                    st.write(", ".join(missing) if missing else "No major gaps 🎉")
+
+                    if missing:
+                        st.subheader("📌 Recommended to Learn")
+                        for skill in missing:
+                            st.write(f"👉 {skill}")
+
+                else:
+                    st.error("Payment Not Found ❌")
+
+            except Exception as e:
+                st.error(f"Error: {e}")
