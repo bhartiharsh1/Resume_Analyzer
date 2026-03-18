@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 from parser import extract_text_from_pdf
 from ats import calculate_ats_score
 from skills import extract_skills, skill_gap
@@ -27,7 +26,7 @@ job_desc = {
     "Data Scientist": "python machine learning statistics deep learning"
 }
 
-# MAIN BLOCK
+# 🔥 MAIN BLOCK
 if uploaded_file:
 
     with st.spinner("Analyzing your resume..."):
@@ -56,60 +55,18 @@ if uploaded_file:
 
     st.divider()
 
-    # LOCKED SECTION
+    # 🔒 LOCKED SECTION
     st.subheader("❌ Missing Skills")
 
     st.markdown("### 🔓 Unlock Full Report (₹79)")
     st.warning("⚡ 90% resumes get rejected due to missing skills")
 
-    # 💳 PAY BUTTON
-    if st.button("💳 Pay Now"):
+    # ✅ PAYMENT LINK (REPLACED BUTTON)
+    st.markdown("[💳 Pay Now](https://rzp.io/rzp/Ir3XL5cl)")
 
-        try:
-            response = requests.post(
-                "https://resume-analyzer-qamg.onrender.com/create_order"
-            )
-            order = response.json()
+    st.info("After payment, enter your details below 👇")
 
-            st.session_state["order_id"] = order["id"]
-
-            # 🔥 Razorpay HTML
-            payment_html = f"""
-            <html>
-            <head>
-                <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
-            </head>
-            <body>
-                <script>
-                    var options = {{
-                        "key": "rzp_test_SSRER7EFytYsML",
-                        "amount": "{order['amount']}",
-                        "currency": "INR",
-                        "name": "Resume Analyzer",
-                        "description": "Unlock Full Report",
-                        "order_id": "{order['id']}",
-                        "handler": function (response){{
-                            alert("Payment Successful!");
-                        }},
-                        "theme": {{
-                            "color": "#3399cc"
-                        }}
-                    }};
-                    var rzp = new Razorpay(options);
-                    rzp.open();
-                </script>
-            </body>
-            </html>
-            """
-
-            components.html(payment_html, height=600)
-
-        except Exception as e:
-            st.error(f"Payment Error: {e}")
-
-    st.divider()
-
-    # 🔐 VERIFY PAYMENT (Manual for now)
+    # 🔐 VERIFY PAYMENT
     st.subheader("🔐 Verify Payment")
 
     payment_id = st.text_input("Enter Payment ID")
@@ -121,22 +78,21 @@ if uploaded_file:
                 "https://resume-analyzer-qamg.onrender.com/verify_payment",
                 json={
                     "payment_id": payment_id,
-                    "order_id": st.session_state.get("order_id"),
+                    "order_id": "",  # no order id with link
                     "signature": signature
                 }
             )
 
             result = response.json()
 
-            if result["status"] == "success":
+            if result.get("status") == "success":
                 st.success("Payment Verified ✅")
 
                 # 🔓 UNLOCK DATA
-                st.subheader("📌 Missing Skills")
                 st.write(", ".join(missing) if missing else "No major gaps 🎉")
 
                 if missing:
-                    st.subheader("📚 Recommended to Learn")
+                    st.subheader("📌 Recommended to Learn")
                     for skill in missing:
                         st.write(f"👉 {skill}")
 
