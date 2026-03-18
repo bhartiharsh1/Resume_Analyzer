@@ -6,7 +6,7 @@ from ats import calculate_ats_score
 from skills import extract_skills, skill_gap
 
 # ─── CONFIG ───────────────────────────────────────────────
-BACKEND_URL = "http://localhost:8000"    # change when deployed
+BACKEND_URL = " "https://resume-analyzer-qamg.onrender.com""    # change when deployed
 RZP_KEY_ID  = "rzp_test_SSRER7EFytYsML" # must match backend
 
 st.set_page_config(page_title="AI Resume Analyzer", layout="centered")
